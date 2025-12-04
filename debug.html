@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug - ConectaServiços</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #2E5F8F; margin-bottom: 20px; }
+    h2 { color: #1B3A52; margin-top: 30px; margin-bottom: 15px; }
+    button {
+      background: #2E5F8F;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover { background: #1B3A52; }
+    .success { background: #10b981; }
+    .danger { background: #ef4444; }
+    .info { background: #3b82f6; }
+    #output {
+      background: #1e293b;
+      color: #10b981;
+      padding: 20px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    input:focus {
+      outline: none;
+      border-color: #2E5F8F;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .stat-card {
+      background: #f8fafc;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #2E5F8F;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Painel de Debug - ConectaServiços</h1>
+    <p>Use esta página para testar se o sistema de autenticação está funcionando corretamente.</p>
+
+    <div class="stats" id="stats"></div>
+
+    <h2>1️⃣ Testes de localStorage</h2>
+    <button onclick="testarLocalStorage()" class="info">Testar localStorage</button>
+    <button onclick="limparTudo()" class="danger">Limpar Tudo</button>
+    <button onclick="inicializarSistema()" class="success">Inicializar Sistema</button>
+
+    <h2>2️⃣ Cadastro de Teste</h2>
+    <div class="form-group">
+      <label>Nome:</label>
+      <input type="text" id="testNome" value="Teste Usuario" placeholder="Digite um nome">
+    </div>
+    <div class="form-group">
+      <label>Email:</label>
+      <input type="email" id="testEmail" value="teste@email.com" placeholder="Digite um email">
+    </div>
+    <div class="form-group">
+      <label>Senha:</label>
+      <input type="password" id="testSenha" value="123456" placeholder="Digite uma senha">
+    </div>
+    <button onclick="testarCadastro()" class="success">Cadastrar Usuário de Teste</button>
+
+    <h2>3️⃣ Login de Teste</h2>
+    <button onclick="testarLogin('maria@email.com', '123456')">Login: Maria (pré-cadastrada)</button>
+    <button onclick="testarLogin('teste@email.com', '123456')">Login: Teste (se cadastrou acima)</button>
+
+    <h2>4️⃣ Verificar Dados</h2>
+    <button onclick="listarUsuarios()" class="info">Listar Todos os Usuários</button>
+    <button onclick="verificarUsuarioLogado()" class="info">Verificar Usuário Logado</button>
+
+    <h2>📊 Console de Debug</h2>
+    <div id="output">Aguardando comandos...</div>
+  </div>
+
+  <script src="assets/js/auth-local.js"></script>
+  <script>
+    const output = document.getElementById('output');
+    
+    function log(msg, tipo = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const cores = {
+        info: '#3b82f6',
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b'
+      };
+      output.innerHTML += `<div style="color: ${cores[tipo]}">[${timestamp}] ${msg}</div>`;
+      output.scrollTop = output.scrollHeight;
+      console.log(msg);
+    }
+
+    function limpar() {
+      output.innerHTML = '';
+    }
+
+    function atualizarStats() {
+      const usuarios = AuthLocal.getUsuarios();
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-label">Usuários Cadastrados</div>
+          <div class="stat-value">${usuarios.length}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Usuário Logado</div>
+          <div class="stat-value">${user ? 'SIM' : 'NÃO'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Token Ativo</div>
+          <div class="stat-value">${token ? 'SIM' : 'NÃO'}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">localStorage OK</div>
+          <div class="stat-value">${typeof(Storage) !== "undefined" ? 'SIM' : 'NÃO'}</div>
+        </div>
+      `;
+    }
+
+    function testarLocalStorage() {
+      limpar();
+      log('🔵 Testando localStorage...', 'info');
+      
+      try {
+        if (typeof(Storage) === "undefined") {
+          log('❌ localStorage NÃO está disponível neste navegador!', 'error');
+          return;
+        }
+        
+        log('✅ localStorage está disponível', 'success');
+        
+        // Teste de escrita
+        localStorage.setItem('teste', 'valor_teste');
+        const valor = localStorage.getItem('teste');
+        
+        if (valor === 'valor_teste') {
+          log('✅ Escrita e leitura funcionando corretamente', 'success');
+          localStorage.removeItem('teste');
+          log('✅ Remoção funcionando corretamente', 'success');
+        } else {
+          log('❌ Erro ao ler valor do localStorage', 'error');
+        }
+        
+        atualizarStats();
+      } catch (e) {
+        log('❌ Erro: ' + e.message, 'error');
+      }
+    }
+
+    function limparTudo() {
+      limpar();
+      log('🔵 Limpando localStorage...', 'info');
+      localStorage.clear();
+      log('✅ localStorage limpo!', 'success');
+      atualizarStats();
+    }
+
+    function inicializarSistema() {
+      limpar();
+      log('🔵 Inicializando AuthLocal...', 'info');
+      AuthLocal.init();
+      log('✅ Sistema inicializado!', 'success');
+      const usuarios = AuthLocal.getUsuarios();
+      log(`📊 Total de usuários: ${usuarios.length}`, 'info');
+      atualizarStats();
+    }
+
+    function testarCadastro() {
+      limpar();
+      const nome = document.getElementById('testNome').value;
+      const email = document.getElementById('testEmail').value;
+      const senha = document.getElementById('testSenha').value;
+      
+      log('🔵 Tentando cadastrar usuário...', 'info');
+      log(`📝 Nome: ${nome}`, 'info');
+      log(`📧 Email: ${email}`, 'info');
+      
+      const dados = {
+        nome: nome,
+        email: email,
+        senha: senha,
+        telefone: '(19) 99999-9999',
+        tipo: 'cliente'
+      };
+      
+      const resultado = AuthLocal.registro(dados);
+      
+      if (resultado.success) {
+        log('✅ SUCESSO! Usuário cadastrado com sucesso!', 'success');
+        log(`🔑 Token: ${resultado.token.substring(0, 30)}...`, 'info');
+        log(`👤 ID: ${resultado.user.id}`, 'info');
+        log(`📧 Email: ${resultado.user.email}`, 'info');
+      } else {
+        log('❌ ERRO: ' + resultado.error.message, 'error');
+      }
+      
+      atualizarStats();
+    }
+
+    function testarLogin(email, senha) {
+      limpar();
+      log('🔵 Tentando fazer login...', 'info');
+      log(`📧 Email: ${email}`, 'info');
+      
+      const resultado = AuthLocal.login(email, senha);
+      
+      if (resultado.success) {
+        log('✅ LOGIN REALIZADO COM SUCESSO!', 'success');
+        log(`👤 Bem-vindo(a), ${resultado.user.nome}!`, 'success');
+        log(`🔑 Token: ${resultado.token.substring(0, 30)}...`, 'info');
+      } else {
+        log('❌ ERRO: ' + resultado.error.message, 'error');
+      }
+      
+      atualizarStats();
+    }
+
+    function listarUsuarios() {
+      limpar();
+      log('🔵 Listando todos os usuários...', 'info');
+      const usuarios = AuthLocal.getUsuarios();
+      
+      if (usuarios.length === 0) {
+        log('⚠️ Nenhum usuário cadastrado', 'warning');
+      } else {
+        log(`📊 Total de ${usuarios.length} usuários:`, 'info');
+        usuarios.forEach((u, index) => {
+          log(`${index + 1}. ${u.nome} (${u.email}) - ${u.tipo}`, 'info');
+        });
+      }
+      
+      atualizarStats();
+    }
+
+    function verificarUsuarioLogado() {
+      limpar();
+      log('🔵 Verificando usuário logado...', 'info');
+      const resultado = AuthLocal.getUsuarioLogado();
+      
+      if (resultado.success) {
+        log('✅ Há um usuário logado:', 'success');
+        log(`👤 Nome: ${resultado.user.nome}`, 'info');
+        log(`📧 Email: ${resultado.user.email}`, 'info');
+        log(`🏷️ Tipo: ${resultado.user.tipo}`, 'info');
+      } else {
+        log('⚠️ Nenhum usuário está logado', 'warning');
+      }
+      
+      atualizarStats();
+    }
+
+    // Inicialização
+    window.onload = function() {
+      log('🚀 Página de debug carregada!', 'success');
+      log('📍 URL: ' + window.location.href, 'info');
+      log('🌐 User Agent: ' + navigator.userAgent.substring(0, 50) + '...', 'info');
+      atualizarStats();
+    };
+  </script>
+</body>
+</html>
