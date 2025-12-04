@@ -563,49 +563,11 @@
       }
     });
   </script>
-</body>
-</html>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/auth-local.js"></script>
+  <script src="assets/js/scripts.js"></script>
 <script>
-  // Processa o cadastro do cliente
-  document.getElementById('formCliente').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    
-    const dados = {
-      nome: formData.get('nome'),
-      email: formData.get('email'),
-      telefone: formData.get('telefone'),
-      cidade: formData.get('cidade'),
-      senha: formData.get('senha'),
-      tipo: 'cliente'
-    };
-
-    try {
-      const response = await fetch('http://localhost:3000/auth/registro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados)
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Salva token e usuário
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Redireciona para home
-        alert('Cadastro realizado com sucesso!');
-        window.location.href = 'home.html';
-      } else {
-        alert(data.error?.message || 'Erro ao realizar cadastro');
-      }
-    } catch (error) {
-      alert('Erro de conexão. Verifique se o servidor está rodando.');
-      console.error(error);
-    }
-  });
-
   // Efeitos interativos JavaScript
   document.addEventListener('DOMContentLoaded', () => {
     // Animação de entrada para os elementos do formulário
