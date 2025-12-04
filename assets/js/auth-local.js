@@ -96,89 +96,178 @@ const AuthLocal = {
 
   // Inicializa o sistema
   init() {
-    if (!localStorage.getItem('usuarios')) {
+    try {
+      const usuariosExistentes = localStorage.getItem('usuarios');
+      if (!usuariosExistentes || usuariosExistentes === 'null' || usuariosExistentes === '[]') {
+        console.log('Inicializando usuarios no localStorage');
+        localStorage.setItem('usuarios', JSON.stringify(this.usuarios));
+        console.log('Usuários inicializados:', this.usuarios.length);
+      } else {
+        const usuarios = JSON.parse(usuariosExistentes);
+        console.log('Usuarios já existem no localStorage:', usuarios.length);
+      }
+    } catch (error) {
+      console.error('Erro ao inicializar localStorage:', error);
       localStorage.setItem('usuarios', JSON.stringify(this.usuarios));
     }
   },
 
   // Retorna todos os usuários
   getUsuarios() {
-    return JSON.parse(localStorage.getItem('usuarios') || '[]');
+    try {
+      const usuariosStr = localStorage.getItem('usuarios');
+      if (!usuariosStr || usuariosStr === 'null') {
+        console.log('localStorage vazio, retornando array vazio');
+        return [];
+      }
+      const usuarios = JSON.parse(usuariosStr);
+      console.log('Total de usuários:', usuarios.length);
+      return Array.isArray(usuarios) ? usuarios : [];
+    } catch (error) {
+      console.error('Erro ao ler usuarios do localStorage:', error);
+      return [];
+    }
   },
 
   // Salva lista de usuários
   setUsuarios(usuarios) {
-    localStorage.setItem('usuarios', JSON.stringify(usuarios));
+    try {
+      if (!Array.isArray(usuarios)) {
+        console.error('setUsuarios: esperava array, recebeu:', typeof usuarios);
+        return;
+      }
+      console.log('Salvando', usuarios.length, 'usuários no localStorage');
+      localStorage.setItem('usuarios', JSON.stringify(usuarios));
+      console.log('Usuários salvos com sucesso');
+      
+      // Verificação
+      const verificacao = localStorage.getItem('usuarios');
+      console.log('Verificação: dados salvos?', verificacao !== null && verificacao !== 'null');
+    } catch (error) {
+      console.error('Erro ao salvar usuarios no localStorage:', error);
+    }
   },
 
   // Registra novo usuário
   registro(dados) {
-    const usuarios = this.getUsuarios();
-
-    // Valida campos obrigatórios
-    if (!dados.nome || !dados.email || !dados.senha || !dados.tipo) {
-      return { success: false, error: { message: 'Campos obrigatórios faltando' } };
-    }
-
-    // Verifica se email já existe
-    if (usuarios.find(u => u.email === dados.email)) {
-      return { success: false, error: { message: 'Email já cadastrado' } };
-    }
-
-    // Cria novo usuário
-    const novoUsuario = {
-      id: String(Date.now()),
-      nome: dados.nome,
-      email: dados.email,
-      senha: dados.senha,
-      telefone: dados.telefone || '',
-      tipo: dados.tipo,
-      ...(dados.tipo === 'prestador' && {
-        cidade: dados.cidade || '',
-        estado: dados.estado || '',
-        categorias: dados.categorias || [],
-        profissao: dados.profissao || '',
-        descricao: dados.descricao || '',
-        avaliacaoMedia: 0,
-        totalAvaliacoes: 0,
-        verificado: false
-      })
-    };
-
-    usuarios.push(novoUsuario);
-    this.setUsuarios(usuarios);
-
-    // Faz login automático
-    const token = `token_${novoUsuario.id}_${Date.now()}`;
-    const { senha, ...userSemSenha } = novoUsuario;
+    console.log('=== INICIANDO REGISTRO ===');
+    console.log('AuthLocal.registro chamado com:', dados);
     
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userSemSenha));
+    try {
+      const usuarios = this.getUsuarios();
+      console.log('Usuários atuais:', usuarios.length);
 
-    return { success: true, token, user: userSemSenha };
+      // Valida campos obrigatórios
+      if (!dados.nome || !dados.email || !dados.senha || !dados.tipo) {
+        console.log('Erro: Campos obrigatórios faltando');
+        return { success: false, error: { message: 'Campos obrigatórios faltando' } };
+      }
+
+      // Verifica se email já existe
+      const emailExiste = usuarios.find(u => u.email === dados.email);
+      if (emailExiste) {
+        console.log('Email já cadastrado:', dados.email);
+        return { success: false, error: { message: 'Email já cadastrado' } };
+      }
+
+      // Cria novo usuário
+      const novoUsuario = {
+        id: String(Date.now()),
+        nome: dados.nome,
+        email: dados.email,
+        senha: dados.senha,
+        telefone: dados.telefone || '',
+        tipo: dados.tipo,
+        ...(dados.tipo === 'prestador' && {
+          cidade: dados.cidade || '',
+          estado: dados.estado || '',
+          categorias: dados.categorias || [],
+          profissao: dados.profissao || '',
+          descricao: dados.descricao || '',
+          avaliacaoMedia: 0,
+          totalAvaliacoes: 0,
+          verificado: false
+        })
+      };
+
+      console.log('Novo usuário criado:', novoUsuario);
+      
+      // Adiciona à lista
+      usuarios.push(novoUsuario);
+      console.log('Usuário adicionado à array. Total:', usuarios.length);
+      
+      // Salva no localStorage
+      this.setUsuarios(usuarios);
+      
+      // Verifica se foi salvo
+      const usuariosDepois = this.getUsuarios();
+      console.log('Usuários após salvar:', usuariosDepois.length);
+      
+      if (usuariosDepois.length !== usuarios.length) {
+        console.error('ERRO: Usuário não foi salvo corretamente!');
+        return { success: false, error: { message: 'Erro ao salvar usuário' } };
+      }
+
+      // Faz login automático
+      const token = `token_${novoUsuario.id}_${Date.now()}`;
+      const { senha, ...userSemSenha } = novoUsuario;
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userSemSenha));
+      console.log('Login automático realizado. Token:', token);
+      console.log('=== REGISTRO CONCLUÍDO COM SUCESSO ===');
+
+      return { success: true, token, user: userSemSenha };
+    } catch (error) {
+      console.error('ERRO ao registrar usuário:', error);
+      return { success: false, error: { message: 'Erro ao processar registro: ' + error.message } };
+    }
   },
 
   // Login
   login(email, senha) {
-    const usuarios = this.getUsuarios();
-
-    if (!email || !senha) {
-      return { success: false, error: { message: 'Email e senha são obrigatórios' } };
-    }
-
-    const usuario = usuarios.find(u => u.email === email && u.senha === senha);
-
-    if (!usuario) {
-      return { success: false, error: { message: 'Email ou senha incorretos' } };
-    }
-
-    const token = `token_${usuario.id}_${Date.now()}`;
-    const { senha: _, ...userSemSenha } = usuario;
+    console.log('=== INICIANDO LOGIN ===');
+    console.log('AuthLocal.login chamado com email:', email);
     
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userSemSenha));
+    try {
+      const usuarios = this.getUsuarios();
+      console.log('Total de usuários no sistema:', usuarios.length);
 
-    return { success: true, token, user: userSemSenha };
+      if (!email || !senha) {
+        console.log('Email ou senha vazios');
+        return { success: false, error: { message: 'Email e senha são obrigatórios' } };
+      }
+
+      // Busca usuário
+      const usuario = usuarios.find(u => {
+        const emailMatch = u.email.toLowerCase() === email.toLowerCase();
+        const senhaMatch = u.senha === senha;
+        console.log(`Verificando ${u.email}: email=${emailMatch}, senha=${senhaMatch}`);
+        return emailMatch && senhaMatch;
+      });
+
+      if (!usuario) {
+        console.log('Credenciais incorretas');
+        console.log('Emails disponíveis:', usuarios.map(u => u.email));
+        return { success: false, error: { message: 'Email ou senha incorretos' } };
+      }
+
+      console.log('Login bem-sucedido para:', usuario.nome);
+      const token = `token_${usuario.id}_${Date.now()}`;
+      const { senha: _, ...userSemSenha } = usuario;
+      
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userSemSenha));
+      
+      console.log('Token salvo:', token);
+      console.log('User salvo:', userSemSenha);
+      console.log('=== LOGIN CONCLUÍDO COM SUCESSO ===');
+
+      return { success: true, token, user: userSemSenha };
+    } catch (error) {
+      console.error('ERRO ao fazer login:', error);
+      return { success: false, error: { message: 'Erro ao processar login: ' + error.message } };
+    }
   },
 
   // Logout
@@ -217,11 +306,57 @@ const AuthLocal = {
     this.logout();
 
     return { success: true, message: 'Conta deletada com sucesso' };
+  },
+
+  // Debug: mostra estado do localStorage
+  debug() {
+    console.log('=== DEBUG AUTHLOCAL ===');
+    console.log('localStorage.usuarios:', localStorage.getItem('usuarios'));
+    console.log('localStorage.token:', localStorage.getItem('token'));
+    console.log('localStorage.user:', localStorage.getItem('user'));
+    
+    const usuarios = this.getUsuarios();
+    console.log('Usuários parseados:', usuarios);
+    console.log('Total de usuários:', usuarios.length);
+    
+    if (usuarios.length > 0) {
+      console.log('Emails cadastrados:', usuarios.map(u => u.email));
+    }
+    
+    return {
+      totalUsuarios: usuarios.length,
+      usuarios: usuarios,
+      logado: !!localStorage.getItem('token')
+    };
+  },
+
+  // Limpa todo o localStorage (CUIDADO!)
+  resetar() {
+    console.log('RESETANDO localStorage...');
+    localStorage.removeItem('usuarios');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    this.init();
+    console.log('localStorage resetado e reinicializado');
   }
 };
 
-// Inicializa ao carregar
-AuthLocal.init();
+// Inicializa ao carregar o script
+console.log('Carregando AuthLocal...');
+try {
+  AuthLocal.init();
+  console.log('AuthLocal inicializado com sucesso');
+} catch (error) {
+  console.error('Erro ao inicializar AuthLocal:', error);
+}
 
 // Torna disponível globalmente
 window.AuthLocal = AuthLocal;
+console.log('AuthLocal disponível globalmente');
+
+// Debug automático em desenvolvimento
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  console.log('Modo de desenvolvimento detectado');
+  window.debugAuth = () => AuthLocal.debug();
+  console.log('Use debugAuth() no console para ver o estado do sistema');
+}
