@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de Autenticação - ConectaServiços</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2E5F8F;
+      border-bottom: 3px solid #2E5F8F;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #1B3A52;
+      margin-top: 30px;
+    }
+    button {
+      background: #2E5F8F;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1B3A52;
+    }
+    button.danger {
+      background: #dc3545;
+    }
+    button.danger:hover {
+      background: #c82333;
+    }
+    .output {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 15px;
+      font-family: monospace;
+      font-size: 13px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #28a745;
+      font-weight: bold;
+    }
+    .error {
+      color: #dc3545;
+      font-weight: bold;
+    }
+    .info {
+      background: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 10px;
+      margin: 15px 0;
+    }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Teste do Sistema de Autenticação</h1>
+    
+    <div class="info">
+      <strong>ℹ️ Informações:</strong>
+      <p>Esta página permite testar todas as funções do sistema AuthLocal.</p>
+      <p>Abra o Console do navegador (F12) para ver logs detalhados.</p>
+    </div>
+
+    <h2>📊 Status do Sistema</h2>
+    <div class="button-group">
+      <button onclick="verificarStatus()">Verificar Status</button>
+      <button onclick="listarUsuarios()">Listar Todos os Usuários</button>
+      <button onclick="limparOutput()">Limpar Output</button>
+      <button class="danger" onclick="resetarSistema()">⚠️ Resetar Sistema</button>
+    </div>
+    <div id="output" class="output"></div>
+
+    <h2>➕ Cadastrar Novo Usuário</h2>
+    <div>
+      <input type="text" id="regNome" placeholder="Nome completo">
+      <input type="email" id="regEmail" placeholder="Email">
+      <input type="password" id="regSenha" placeholder="Senha (min 6 caracteres)">
+      <input type="tel" id="regTelefone" placeholder="Telefone (opcional)">
+      <select id="regTipo">
+        <option value="cliente">Cliente</option>
+        <option value="prestador">Prestador</option>
+      </select>
+      <button onclick="cadastrarUsuario()">Cadastrar</button>
+    </div>
+
+    <h2>🔑 Fazer Login</h2>
+    <div>
+      <input type="email" id="loginEmail" placeholder="Email">
+      <input type="password" id="loginSenha" placeholder="Senha">
+      <button onclick="fazerLogin()">Login</button>
+      <button onclick="verificarLogado()">Verificar se está logado</button>
+      <button onclick="fazerLogout()">Logout</button>
+    </div>
+
+    <h2>🔍 Teste Rápido</h2>
+    <p>Cadastre e faça login com um usuário de teste:</p>
+    <div class="button-group">
+      <button onclick="testeCompleto()">Executar Teste Completo</button>
+    </div>
+  </div>
+
+  <script src="assets/js/auth-local.js"></script>
+  <script>
+    const output = document.getElementById('output');
+
+    function log(msg, tipo = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const className = tipo === 'success' ? 'success' : tipo === 'error' ? 'error' : '';
+      output.innerHTML += `<div class="${className}">[${timestamp}] ${msg}</div>`;
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function limparOutput() {
+      output.innerHTML = '';
+    }
+
+    function verificarStatus() {
+      log('=== VERIFICANDO STATUS DO SISTEMA ===');
+      
+      if (typeof AuthLocal === 'undefined') {
+        log('❌ ERRO: AuthLocal não está carregado!', 'error');
+        return;
+      }
+      
+      log('✅ AuthLocal está carregado', 'success');
+      
+      const status = AuthLocal.debug();
+      log(`📊 Total de usuários: ${status.totalUsuarios}`);
+      log(`🔐 Usuário logado: ${status.logado ? 'SIM' : 'NÃO'}`);
+      
+      if (status.totalUsuarios > 0) {
+        log('📧 Emails cadastrados:');
+        status.usuarios.forEach(u => {
+          log(`  - ${u.email} (${u.tipo})`);
+        });
+      }
+    }
+
+    function listarUsuarios() {
+      log('=== LISTANDO USUÁRIOS ===');
+      const usuarios = AuthLocal.getUsuarios();
+      
+      if (usuarios.length === 0) {
+        log('⚠️ Nenhum usuário cadastrado');
+        return;
+      }
+      
+      usuarios.forEach((u, i) => {
+        log(`\n👤 Usuário ${i + 1}:`);
+        log(`   Nome: ${u.nome}`);
+        log(`   Email: ${u.email}`);
+        log(`   Tipo: ${u.tipo}`);
+        log(`   Telefone: ${u.telefone || 'não informado'}`);
+        if (u.tipo === 'prestador') {
+          log(`   Profissão: ${u.profissao || 'não informada'}`);
+          log(`   Cidade: ${u.cidade || 'não informada'}`);
+        }
+      });
+    }
+
+    function cadastrarUsuario() {
+      const nome = document.getElementById('regNome').value;
+      const email = document.getElementById('regEmail').value;
+      const senha = document.getElementById('regSenha').value;
+      const telefone = document.getElementById('regTelefone').value;
+      const tipo = document.getElementById('regTipo').value;
+
+      if (!nome || !email || !senha) {
+        log('❌ Preencha nome, email e senha!', 'error');
+        return;
+      }
+
+      log('=== CADASTRANDO NOVO USUÁRIO ===');
+      log(`Nome: ${nome}`);
+      log(`Email: ${email}`);
+      log(`Tipo: ${tipo}`);
+
+      const dados = {
+        nome,
+        email,
+        senha,
+        telefone,
+        tipo,
+        ...(tipo === 'prestador' && {
+          cidade: 'Indaiatuba',
+          estado: 'SP',
+          profissao: 'Profissional',
+          categorias: ['Geral'],
+          descricao: 'Descrição de teste'
+        })
+      };
+
+      const resultado = AuthLocal.registro(dados);
+
+      if (resultado.success) {
+        log('✅ Cadastro realizado com sucesso!', 'success');
+        log(`Token: ${resultado.token}`);
+        log(`Usuário: ${resultado.user.nome}`);
+        
+        // Limpa campos
+        document.getElementById('regNome').value = '';
+        document.getElementById('regEmail').value = '';
+        document.getElementById('regSenha').value = '';
+        document.getElementById('regTelefone').value = '';
+      } else {
+        log(`❌ Erro: ${resultado.error.message}`, 'error');
+      }
+    }
+
+    function fazerLogin() {
+      const email = document.getElementById('loginEmail').value;
+      const senha = document.getElementById('loginSenha').value;
+
+      if (!email || !senha) {
+        log('❌ Preencha email e senha!', 'error');
+        return;
+      }
+
+      log('=== FAZENDO LOGIN ===');
+      log(`Email: ${email}`);
+
+      const resultado = AuthLocal.login(email, senha);
+
+      if (resultado.success) {
+        log('✅ Login realizado com sucesso!', 'success');
+        log(`Token: ${resultado.token}`);
+        log(`Usuário: ${resultado.user.nome}`);
+        log(`Tipo: ${resultado.user.tipo}`);
+      } else {
+        log(`❌ Erro: ${resultado.error.message}`, 'error');
+      }
+    }
+
+    function verificarLogado() {
+      log('=== VERIFICANDO USUÁRIO LOGADO ===');
+      
+      const resultado = AuthLocal.getUsuarioLogado();
+
+      if (resultado.success) {
+        log('✅ Usuário está logado', 'success');
+        log(`Nome: ${resultado.user.nome}`);
+        log(`Email: ${resultado.user.email}`);
+        log(`Tipo: ${resultado.user.tipo}`);
+      } else {
+        log('❌ Nenhum usuário logado', 'error');
+      }
+    }
+
+    function fazerLogout() {
+      log('=== FAZENDO LOGOUT ===');
+      
+      const resultado = AuthLocal.logout();
+
+      if (resultado.success) {
+        log('✅ Logout realizado com sucesso!', 'success');
+      }
+    }
+
+    function resetarSistema() {
+      if (!confirm('⚠️ ATENÇÃO: Isso vai apagar TODOS os dados do localStorage!\n\nTem certeza?')) {
+        return;
+      }
+
+      log('=== RESETANDO SISTEMA ===');
+      AuthLocal.resetar();
+      log('✅ Sistema resetado! Usuários padrão restaurados.', 'success');
+      verificarStatus();
+    }
+
+    function testeCompleto() {
+      limparOutput();
+      log('=== INICIANDO TESTE COMPLETO ===\n');
+      
+      // 1. Verifica status
+      log('1️⃣ Verificando status inicial...');
+      verificarStatus();
+      
+      // 2. Cadastra usuário de teste
+      setTimeout(() => {
+        log('\n2️⃣ Cadastrando usuário de teste...');
+        const emailTeste = 'teste' + Date.now() + '@email.com';
+        const dados = {
+          nome: 'Usuário Teste',
+          email: emailTeste,
+          senha: '123456',
+          telefone: '(19) 99999-9999',
+          tipo: 'cliente'
+        };
+        
+        const registro = AuthLocal.registro(dados);
+        if (registro.success) {
+          log('✅ Usuário cadastrado com sucesso!', 'success');
+          
+          // 3. Faz logout
+          setTimeout(() => {
+            log('\n3️⃣ Fazendo logout...');
+            AuthLocal.logout();
+            log('✅ Logout realizado', 'success');
+            
+            // 4. Tenta fazer login
+            setTimeout(() => {
+              log('\n4️⃣ Tentando fazer login...');
+              const login = AuthLocal.login(emailTeste, '123456');
+              
+              if (login.success) {
+                log('✅ Login realizado com sucesso!', 'success');
+                log(`Usuário: ${login.user.nome}`);
+                log('\n🎉 TESTE COMPLETO FINALIZADO COM SUCESSO!', 'success');
+              } else {
+                log('❌ Erro no login: ' + login.error.message, 'error');
+              }
+              
+              // Status final
+              setTimeout(() => {
+                log('\n📊 Status final:');
+                verificarStatus();
+              }, 500);
+            }, 500);
+          }, 500);
+        } else {
+          log('❌ Erro no cadastro: ' + registro.error.message, 'error');
+        }
+      }, 500);
+    }
+
+    // Mensagem inicial
+    window.addEventListener('load', () => {
+      log('🚀 Página de teste carregada');
+      log('Clique em "Verificar Status" para começar');
+    });
+  </script>
+</body>
+</html>
